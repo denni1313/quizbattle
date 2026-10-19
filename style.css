@@ -1,0 +1,91 @@
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100%; }
+  body {
+    font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+    color: #fff;
+    background: linear-gradient(135deg, #ff8a00 0%, #8e2de2 50%, #ff3d9a 100%);
+    background-attachment: fixed;
+    display: flex;
+    justify-content: center;
+    padding: 16px;
+  }
+  .app { width: 100%; max-width: 860px; display: flex; flex-direction: column; gap: 14px; min-height: calc(100vh - 32px); }
+  .hidden { display: none !important; }
+
+  .top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .pill { white-space: nowrap; background: rgba(0, 0, 0, .28); border-radius: 999px; padding: 8px 18px; font-weight: 800; font-size: 1.05rem; }
+  .bar { height: 10px; background: rgba(0, 0, 0, .25); border-radius: 999px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: #ffd23f; border-radius: 999px; transition: width .4s ease; }
+
+  .card {
+    background: #fff; color: #2b1055; border-radius: 22px; padding: 26px 20px;
+    text-align: center; box-shadow: 0 8px 0 rgba(0, 0, 0, .2);
+  }
+  .q { font-size: clamp(1.5rem, 5vw, 2.4rem); font-weight: 900; line-height: 1.2; }
+
+  .answers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; flex: 1; }
+  .ans {
+    border: none; border-radius: 18px; color: #fff; cursor: pointer; font: inherit;
+    font-weight: 900; font-size: clamp(1.25rem, 4.6vw, 2rem);
+    min-height: 120px; padding: 14px; display: flex; align-items: center; justify-content: center; gap: 12px;
+    text-align: left; box-shadow: 0 8px 0 rgba(0, 0, 0, .25);
+    transition: transform .1s ease, box-shadow .1s ease, opacity .2s ease, filter .2s ease;
+  }
+  .ans:hover:not(:disabled) { transform: translateY(2px); box-shadow: 0 6px 0 rgba(0, 0, 0, .25); }
+  .ans:active:not(:disabled) { transform: translateY(8px); box-shadow: 0 0 0 rgba(0, 0, 0, .25); }
+  .ans .letter { background: rgba(0, 0, 0, .22); border-radius: 12px; width: 46px; height: 46px; flex: none; display: grid; place-items: center; font-size: 1.5rem; }
+  .ans .txt { flex: 1; text-align: center; text-transform: capitalize; }
+  .c0 { background: #e21b3c; } .c1 { background: #1368ce; } .c2 { background: #d89e00; } .c3 { background: #26890c; }
+  .ans:disabled { cursor: default; }
+  .ans.photo { position: relative; overflow: hidden; padding: 0; background: #2b1055; min-height: 270px; align-items: flex-end; justify-content: center; }
+  .ans.photo img { position: absolute; top: 0; left: 0; width: 100%; height: calc(100% - 44px); object-fit: cover; object-position: center 28%; }
+  .ans.photo .letter { position: absolute; top: 10px; left: 10px; z-index: 2; background: rgba(0, 0, 0, .55); }
+  .ans.photo .txt { position: relative; z-index: 2; flex: none; width: 100%; padding: 8px 10px; background: rgba(20, 5, 45, .82); }
+  .ans.dim { opacity: .35; filter: grayscale(.4); }
+  .ans.right { outline: 6px solid #fff; animation: pop .4s ease; }
+  .ans.wrong { animation: shake .4s ease; }
+  @keyframes pop { 50% { transform: scale(1.04); } }
+  @keyframes shake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+
+  .feedback { text-align: center; min-height: 64px; }
+  .fb-text { font-size: 1.5rem; font-weight: 900; margin-bottom: 8px; }
+  .next {
+    background: #ffd23f; color: #2b1055; border: none; border-radius: 16px; cursor: pointer; font: inherit;
+    font-weight: 900; font-size: 1.3rem; padding: 14px 34px; box-shadow: 0 6px 0 #b8941d;
+  }
+  .next:active { transform: translateY(5px); box-shadow: 0 1px 0 #b8941d; }
+
+  .center { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 20px; text-align: center; }
+  .big { font-size: clamp(2.2rem, 8vw, 4rem); font-weight: 900; line-height: 1.1; text-shadow: 0 4px 0 rgba(0, 0, 0, .25); }
+  .sub { font-size: clamp(1.1rem, 4vw, 1.5rem); max-width: 30em; }
+  .score-big { font-size: clamp(3.5rem, 16vw, 7rem); font-weight: 900; color: #ffd23f; text-shadow: 0 5px 0 rgba(0, 0, 0, .3); }
+  .emoji { font-size: clamp(3rem, 12vw, 5rem); }
+
+  .timer { position: relative; height: 34px; background: rgba(0, 0, 0, .3); border-radius: 999px; overflow: hidden; }
+  .timer i { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: #26c281; transition: width .25s linear, background .3s ease; }
+  .timer.warn i { background: #ffd23f; }
+  .timer.danger i { background: #e21b3c; }
+  .timer b { position: relative; z-index: 1; display: block; text-align: center; line-height: 34px; font-size: 1.2rem; font-weight: 900; text-shadow: 0 2px 0 rgba(0, 0, 0, .35); }
+  .timer.danger b { animation: tick .5s ease-in-out infinite alternate; }
+  @keyframes tick { to { transform: scale(1.18); } }
+  .menu { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 420px; }
+  .mode { width: 100%; }
+  .mode.alt { background: #fff; color: #46178f; box-shadow: 0 6px 0 rgba(0, 0, 0, .25); }
+  .names { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 420px; }
+  .names input {
+    width: 100%; font: inherit; font-weight: 800; font-size: 1.3rem; text-align: center;
+    padding: 14px; border-radius: 14px; border: 4px solid transparent; color: #2b1055;
+  }
+  .names input.p0 { border-color: #e21b3c; } .names input.p1 { border-color: #1368ce; }
+  .turn { text-align: center; font-weight: 900; font-size: 1.3rem; border-radius: 14px; padding: 10px; }
+  .turn.t0 { background: #e21b3c; } .turn.t1 { background: #1368ce; }
+  .pill.on { background: #ffd23f; color: #2b1055; }
+  .pill.s0 { border: 3px solid #e21b3c; } .pill.s1 { border: 3px solid #1368ce; }
+  .scores { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .fb-line { font-size: 1.15rem; font-weight: 800; margin: 2px 0; }
+  .pass-name { font-size: clamp(2rem, 8vw, 3.4rem); font-weight: 900; color: #ffd23f; text-shadow: 0 4px 0 rgba(0, 0, 0, .3); }
+  @media (max-width: 520px) {
+    .answers { grid-template-columns: 1fr; }
+    .ans { min-height: 84px; }
+    .ans.photo { min-height: 240px; }
+  }
