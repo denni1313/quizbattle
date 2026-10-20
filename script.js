@@ -19,6 +19,72 @@
   var TIME_LIMIT = 20;
   var timerId = null, deadline = 0;
   var SECTIONS = ["start", "setup", "pass", "game", "result"];
+  var HINTS = 2;            // сколько раз за игру можно взять 50/50
+  var hints = [HINTS, HINTS];
+  var hintUsed = false;     // на этом вопросе уже брали подсказку
+
+  // ---------- Звуки (рисуются прямо в браузере, без файлов) ----------
+  var audio = null;
+  var muted = false;
+  try { muted = localStorage.getItem("qb-muted") === "1"; } catch (e) {}
+
+  function ac() {
+    if (!audio) {
+      var C = window.AudioContext || window.webkitAudioContext;
+      if (!C) return null;
+      audio = new C();
+    }
+    if (audio.state === "suspended") audio.resume();
+    return audio;
+  }
+
+  function tone(freq, start, dur, type, vol, freqEnd) {
+    var c = ac();
+    if (!c || muted) return;
+    var t0 = c.currentTime + start;
+    var o = c.createOscillator();
+    var g = c.createGain();
+    o.type = type || "sine";
+    o.frequency.setValueAtTime(freq, t0);
+    if (freqEnd) o.frequency.exponentialRampToValueAtTime(freqEnd, t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol || 0.25, t0 + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g);
+    g.connect(c.destination);
+    o.start(t0);
+    o.stop(t0 + dur + 0.05);
+  }
+
+  var SOUNDS = {
+    // весёлый звонкий «дзынь-дзынь» вверх
+    right: function () {
+      tone(784, 0, 0.12, "triangle", 0.3);
+      tone(1047, 0.09, 0.12, "triangle", 0.3);
+      tone(1319, 0.18, 0.3, "triangle", 0.28);
+      tone(2637, 0.18, 0.25, "sine", 0.05);
+    },
+    // низкое «бу-бу» вниз
+    wrong: function () {
+      tone(311, 0, 0.16, "square", 0.1);
+      tone(233, 0.14, 0.32, "square", 0.1, 196);
+    },
+    timeout: function () {
+      tone(440, 0, 0.12, "sawtooth", 0.07);
+      tone(330, 0.13, 0.28, "sawtooth", 0.07);
+    },
+    // «вжух» для подсказки
+    hint: function () { tone(380, 0, 0.2, "sine", 0.22, 1200); },
+    // фанфары на финале
+    win: function () {
+      [523, 659, 784, 1047].forEach(function (f, i) { tone(f, i * 0.11, 0.22, "triangle", 0.25); });
+      tone(1568, 0.46, 0.55, "triangle", 0.2);
+    }
+  };
+
+  function play(name) { if (!muted && SOUNDS[name]) SOUNDS[name](); }
+
+  function renderMute() { $("muteBtn").textContent = muted ? "🔇" : "🔊"; }
 
   function drawTimer(left) {
     var t = $("timer");
@@ -83,15 +149,48 @@
     t.textContent = "Ход: " + names[turn];
   }
 
+  function renderHint() {
+    var p = mode === "solo" ? 0 : turn;
+    $("hintLeft").textContent = "×" + hints[p];
+    $("hintBtn").disabled = locked || hintUsed || hints[p] <= 0;
+  }
+
+  function useHint() {
+    var p = mode === "solo" ? 0 : turn;
+    if (locked || hintUsed || hints[p] <= 0) return;
+    hints[p]--;
+    hintUsed = true;
+    var item = QUESTIONS[index];
+    var wrong = [];
+    for (var k = 0; k < item.a.length; k++) if (k !== item.right) wrong.push(k);
+    // убираем два случайных неправильных ответа
+    wrong.sort(function () { return Math.random() - 0.5; });
+    var buttons = $("answers").children;
+    wrong.slice(0, 2).forEach(function (k) {
+      buttons[k].classList.add("gone");
+      buttons[k].disabled = true;
+    });
+    play("hint");
+    renderHint();
+  }
+
   function render() {
     var item = QUESTIONS[index];
     locked = false;
+    hintUsed = false;
     $("counter").textContent = "Вопрос " + (index + 1) + " из " + QUESTIONS.length;
     renderScores();
     renderTurn();
     $("barFill").style.width = (index / QUESTIONS.length * 100) + "%";
     $("question").textContent = item.q;
     $("feedback").innerHTML = "";
+    renderAnswers();
+    renderHint();
+    startTimer();
+  }
+
+  function renderAnswers() {
+    var item = QUESTIONS[index];
     var box = $("answers");
     box.innerHTML = "";
     item.a.forEach(function (text, i) {
@@ -111,7 +210,6 @@
       b.addEventListener("click", function () { choose(i); });
       box.appendChild(b);
     });
-    startTimer();
   }
 
   function markAnswers(chosen) {
@@ -140,6 +238,7 @@
     if (locked) return;
     locked = true;
     stopTimer();
+    renderHint();
     var item = QUESTIONS[index];
     var timedOut = i === -1;
 
@@ -150,6 +249,7 @@
       markAnswers(i);
       if (ok) scores[0]++;
       else if (lost) scores[0]--;
+      play(ok ? "right" : (timedOut ? "timeout" : "wrong"));
       renderScores();
       var fb = $("feedback");
       fb.innerHTML = "";
@@ -189,6 +289,7 @@
       line.textContent = names[k] + ": " + (okk ? "верно! +1 ✅" : (picks[k] === -1 ? "не успел ⏰ 0" : (lostk ? "мимо −1 ❌" : "мимо ❌ 0")));
       fb2.appendChild(line);
     }
+    play(picks[0] === item.right || picks[1] === item.right ? "right" : "wrong");
     renderScores();
     $("turn").classList.add("hidden");
     var sp = document.createElement("div");
@@ -210,11 +311,13 @@
       $("resLabel").textContent = "Итог дуэли";
       $("resScore").textContent = scores[0] + " : " + scores[1];
       if (scores[0] === scores[1]) {
+        play("right");
         $("resEmoji").textContent = "🤝";
         $("resTitle").textContent = "Ничья!";
         $("resText").textContent = "Вы знаете меня одинаково хорошо. Сыграйте ещё раз, чтобы выявить победителя!";
       } else {
         var w = scores[0] > scores[1] ? 0 : 1;
+        play("win");
         $("resEmoji").textContent = "🏆";
         $("resTitle").textContent = "Победил " + names[w] + "!";
         $("resText").textContent = names[w] + " знает меня лучше: " + scores[w] + " из " + QUESTIONS.length + ". Поздравляем!";
@@ -226,6 +329,7 @@
     for (var i = 0; i < RESULTS.length; i++) {
       if (scores[0] >= RESULTS[i].min) { r = RESULTS[i]; break; }
     }
+    play(scores[0] >= 3 ? "win" : "wrong");
     $("resLabel").textContent = "Твой результат";
     $("resEmoji").textContent = r.emoji;
     $("resScore").textContent = scores[0] + " из " + QUESTIONS.length;
@@ -236,6 +340,8 @@
 
   function begin() {
     index = 0; turn = 0; picks = []; scores = [0, 0];
+    hints = [HINTS, HINTS];
+    ac();   // звук включается после первого нажатия (так требуют браузеры)
     show("game");
     render();
   }
@@ -251,8 +357,19 @@
   $("readyBtn").addEventListener("click", function () {
     show("game");
     locked = false;
+    hintUsed = false;
+    renderAnswers();
     renderTurn();
+    renderHint();
     startTimer();
   });
   $("againBtn").addEventListener("click", function () { stopTimer(); show("start"); });
+  $("hintBtn").addEventListener("click", useHint);
+  $("muteBtn").addEventListener("click", function () {
+    muted = !muted;
+    try { localStorage.setItem("qb-muted", muted ? "1" : "0"); } catch (e) {}
+    renderMute();
+    if (!muted) play("right");
+  });
+  renderMute();
 })();
