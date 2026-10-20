@@ -145,16 +145,18 @@
 
     if (mode === "solo") {
       var ok = i === item.right;
+      // ниже нуля счёт не опускается
+      var lost = !ok && !timedOut && scores[0] > 0;
       markAnswers(i);
       if (ok) scores[0]++;
-      else if (!timedOut) scores[0]--;
+      else if (lost) scores[0]--;
       renderScores();
       var fb = $("feedback");
       fb.innerHTML = "";
       var t = document.createElement("div");
       t.className = "fb-text";
       var msg = timedOut ? "Время вышло! ⏰" : (ok ? PRAISE[Math.floor(Math.random() * PRAISE.length)] : OOPS[Math.floor(Math.random() * OOPS.length)]);
-      t.textContent = ok ? msg + " +1 балл" : (timedOut ? msg + " Балл не меняется. Правильный ответ: " + item.a[item.right] : msg + " −1 балл. Правильный ответ: " + item.a[item.right]);
+      t.textContent = ok ? msg + " +1 балл" : msg + (lost ? " −1 балл." : " Балл не меняется.") + " Правильный ответ: " + item.a[item.right];
       fb.appendChild(t);
       nextButton(fb);
       return;
@@ -178,11 +180,13 @@
     fb2.appendChild(rightText);
     for (var k = 0; k < 2; k++) {
       var okk = picks[k] === item.right;
+      // ниже нуля счёт не опускается
+      var lostk = !okk && picks[k] !== -1 && scores[k] > 0;
       if (okk) scores[k]++;
-      else if (picks[k] !== -1) scores[k]--;
+      else if (lostk) scores[k]--;
       var line = document.createElement("div");
       line.className = "fb-line";
-      line.textContent = names[k] + ": " + (okk ? "верно! +1 ✅" : (picks[k] === -1 ? "не успел ⏰ 0" : "мимо −1 ❌"));
+      line.textContent = names[k] + ": " + (okk ? "верно! +1 ✅" : (picks[k] === -1 ? "не успел ⏰ 0" : (lostk ? "мимо −1 ❌" : "мимо ❌ 0")));
       fb2.appendChild(line);
     }
     renderScores();
