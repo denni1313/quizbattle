@@ -15,6 +15,7 @@
   var mode = "solo";
   var names = ["Игрок 1", "Игрок 2"];
   var scores = [0, 0];
+  var correct = [0, 0];    // сколько ответов верно (для процента), не зависит от штрафов
   var turn = 0, picks = [];
   var TIME_LIMIT = 20;
   var timerId = null, deadline = 0;
@@ -22,6 +23,8 @@
   var HINTS = 2;            // сколько раз за игру можно взять 50/50
   var hints = [HINTS, HINTS];
   var hintUsed = false;     // на этом вопросе уже брали подсказку
+  var BEST_KEY = "qb-best";
+  var best = null;          // { score, percent, total } — лучший результат одиночной игры
 
   // ---------- Звуки (рисуются прямо в браузере, без файлов) ----------
   var audio = null;
@@ -114,6 +117,65 @@
         drawTimer(left);
       }
     }, 200);
+  }
+
+  function percent(n) {
+    return QUESTIONS.length ? Math.round(n / QUESTIONS.length * 100) : 0;
+  }
+
+  // ---------- Лучший результат одиночной игры ----------
+  function loadBest() {
+    try {
+      var raw = localStorage.getItem(BEST_KEY);
+      if (!raw) return;
+      var b = JSON.parse(raw);
+      if (!b || typeof b.score !== "number" || typeof b.percent !== "number" ||
+          b.percent < 0 || b.percent > 100 ||
+          b.score < 0 || b.score > QUESTIONS.length) return;
+      var total = typeof b.total === "number" && b.total > 0 ? Math.round(b.total) : QUESTIONS.length;
+      var cnt = typeof b.correct === "number" && b.correct >= 0 && b.correct <= total
+        ? Math.round(b.correct)
+        : Math.round(b.percent / 100 * total);   // старые записи без поля correct
+      best = {
+        score: Math.round(b.score),
+        correct: cnt,
+        percent: Math.round(b.percent),
+        total: total
+      };
+    } catch (e) { best = null; }
+  }
+
+  function saveBest() {
+    try { localStorage.setItem(BEST_KEY, JSON.stringify(best)); } catch (e) {}
+  }
+
+  function isBetter(p, s) {
+    if (!best) return true;
+    if (p !== best.percent) return p > best.percent;
+    return s > best.score;
+  }
+
+  function renderBest(record) {
+    var startEl = $("bestStart");
+    var resEl = $("bestResult");
+    if (best) {
+      startEl.textContent = "🏆 Лучший результат: " + best.percent + "% (" + best.correct + " из " + best.total + ")";
+      startEl.classList.remove("hidden");
+    } else {
+      startEl.classList.add("hidden");
+    }
+    if (record) {
+      resEl.textContent = "🎉 Новый рекорд: " + percent(correct[0]) + "% (" + correct[0] + " из " + QUESTIONS.length + ")";
+      resEl.classList.remove("hidden");
+      resEl.classList.add("record");
+    } else if (best) {
+      resEl.textContent = "🏆 Лучший результат: " + best.percent + "% (" + best.correct + " из " + best.total + ")";
+      resEl.classList.remove("hidden");
+      resEl.classList.remove("record");
+    } else {
+      resEl.classList.add("hidden");
+      resEl.classList.remove("record");
+    }
   }
 
   function show(id) {
@@ -247,7 +309,7 @@
       // ниже нуля счёт не опускается
       var lost = !ok && !timedOut && scores[0] > 0;
       markAnswers(i);
-      if (ok) scores[0]++;
+      if (ok) { scores[0]++; correct[0]++; }
       else if (lost) scores[0]--;
       play(ok ? "right" : (timedOut ? "timeout" : "wrong"));
       renderScores();
@@ -282,7 +344,7 @@
       var okk = picks[k] === item.right;
       // ниже нуля счёт не опускается
       var lostk = !okk && picks[k] !== -1 && scores[k] > 0;
-      if (okk) scores[k]++;
+      if (okk) { scores[k]++; correct[k]++; }
       else if (lostk) scores[k]--;
       var line = document.createElement("div");
       line.className = "fb-line";
@@ -310,6 +372,9 @@
     if (mode === "duel") {
       $("resLabel").textContent = "Итог дуэли";
       $("resScore").textContent = scores[0] + " : " + scores[1];
+      $("bestResult").classList.add("hidden");
+      $("bestResult").classList.remove("record");
+      $("resPercent").textContent = names[0] + " — " + percent(correct[0]) + "% • " + names[1] + " — " + percent(correct[1]) + "%";
       if (scores[0] === scores[1]) {
         play("right");
         $("resEmoji").textContent = "🤝";
@@ -320,7 +385,7 @@
         play("win");
         $("resEmoji").textContent = "🏆";
         $("resTitle").textContent = "Победил " + names[w] + "!";
-        $("resText").textContent = names[w] + " знает меня лучше: " + scores[w] + " из " + QUESTIONS.length + ". Поздравляем!";
+        $("resText").textContent = names[w] + " знает меня лучше: " + correct[w] + " из " + QUESTIONS.length + " (" + percent(correct[w]) + "% правильных). Поздравляем!";
       }
       show("result");
       return;
@@ -333,13 +398,21 @@
     $("resLabel").textContent = "Твой результат";
     $("resEmoji").textContent = r.emoji;
     $("resScore").textContent = scores[0] + " из " + QUESTIONS.length;
+    var p = percent(correct[0]);
+    $("resPercent").textContent = p + "% правильных";
+    var record = isBetter(p, scores[0]);
+    if (record) {
+      best = { score: scores[0], correct: correct[0], percent: p, total: QUESTIONS.length };
+      saveBest();
+    }
+    renderBest(record);
     $("resTitle").textContent = r.title;
     $("resText").textContent = r.text;
     show("result");
   }
 
   function begin() {
-    index = 0; turn = 0; picks = []; scores = [0, 0];
+    index = 0; turn = 0; picks = []; scores = [0, 0]; correct = [0, 0];
     hints = [HINTS, HINTS];
     ac();   // звук включается после первого нажатия (так требуют браузеры)
     show("game");
@@ -372,4 +445,6 @@
     if (!muted) play("right");
   });
   renderMute();
+  loadBest();
+  renderBest();
 })();

@@ -59,6 +59,15 @@
   .big { font-size: clamp(2.2rem, 8vw, 4rem); font-weight: 900; line-height: 1.1; text-shadow: 0 4px 0 rgba(0, 0, 0, .25); }
   .sub { font-size: clamp(1.1rem, 4vw, 1.5rem); max-width: 30em; }
   .score-big { font-size: clamp(3.5rem, 16vw, 7rem); font-weight: 900; color: #ffd23f; text-shadow: 0 5px 0 rgba(0, 0, 0, .3); }
+  .percent {
+    display: inline-block; align-self: center; background: rgba(0, 0, 0, .28); border-radius: 999px;
+    padding: 8px 22px; font-weight: 900; font-size: clamp(1.1rem, 4vw, 1.5rem);
+  }
+  .best {
+    display: inline-block; align-self: center; background: rgba(0, 0, 0, .28); border-radius: 999px;
+    padding: 8px 20px; font-weight: 900; font-size: clamp(1rem, 3.6vw, 1.3rem);
+  }
+  .best.record { background: #ffd23f; color: #2b1055; box-shadow: 0 4px 0 rgba(0, 0, 0, .25); }
   .emoji { font-size: clamp(3rem, 12vw, 5rem); }
 
   .timer { position: relative; height: 34px; background: rgba(0, 0, 0, .3); border-radius: 999px; overflow: hidden; }
