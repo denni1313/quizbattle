@@ -25,8 +25,6 @@
   var BEST_KEY = "qb-best";
   var LANG_KEY = "qb-lang";
   var LANG_KEYS = { ru: "langRu", pt: "langPt", en: "langEn" };
-  // Полные названия — только для screen reader, на кнопках короткие «РУ / ПТ / НГ».
-  var LANG_ARIA = { ru: "Русский", pt: "Português", en: "English" };
   var best = null;          // { score, percent, total } — лучший результат одиночной игры
   var recordFlag = false;   // текущая одиночная игра побила рекорд (не пересчитываем при смене языка)
 
@@ -101,10 +99,7 @@
     var btns = document.querySelectorAll(".lang");
     for (var b = 0; b < btns.length; b++) {
       var code = btns[b].getAttribute("data-lang");
-      var name = t(LANG_KEYS[code]);
-      btns[b].textContent = name;
-      btns[b].setAttribute("aria-label", LANG_ARIA[code]);
-      btns[b].title = LANG_ARIA[code];
+      btns[b].setAttribute("aria-label", t(LANG_KEYS[code]));
       var on = code === l;
       btns[b].classList.toggle("on", on);
       btns[b].setAttribute("aria-pressed", on ? "true" : "false");
@@ -367,14 +362,13 @@
     });
   }
 
-  // reveal = true, только если ответ верный: при ошибке правильный вариант не подсвечиваем
-  function markAnswers(chosen, reveal) {
+  function markAnswers(chosen) {
     var item = QUESTIONS[index];
     var buttons = $("answers").children;
     for (var k = 0; k < buttons.length; k++) {
       buttons[k].disabled = true;
-      if (k === item.right && reveal) buttons[k].classList.add("right");
-      else if (k === chosen) buttons[k].classList.add("wrong");
+      // правильный вариант подсвечиваем только если игрок сам его выбрал
+      if (k === chosen) buttons[k].classList.add(chosen === item.right ? "right" : "wrong");
       else buttons[k].classList.add("dim");
     }
   }
@@ -402,7 +396,7 @@
       var ok = i === item.right;
       // ниже нуля счёт не опускается
       var lost = !ok && !timedOut && scores[0] > 0;
-      markAnswers(i, ok);
+      markAnswers(i);
       if (ok) { scores[0]++; correct[0]++; }
       else if (lost) scores[0]--;
       play(ok ? "right" : (timedOut ? "timeout" : "wrong"));
@@ -429,17 +423,10 @@
       show("pass");
       return;
     }
-    // ответили оба: очки показываем всегда, правильный ответ — только если кто-то угадал
-    var reveal = picks[0] === item.right || picks[1] === item.right;
-    markAnswers(i, reveal);
+    // ответили оба: показываем, кто как ответил, но не раскрываем правильный вариант
+    markAnswers(i);
     var fb2 = $("feedback");
     fb2.innerHTML = "";
-    if (reveal) {
-      var rightText = document.createElement("div");
-      rightText.className = "fb-text";
-      rightText.textContent = t("rightAnswer", { answer: aText(item, item.right) });
-      fb2.appendChild(rightText);
-    }
     for (var k = 0; k < 2; k++) {
       var okk = picks[k] === item.right;
       // ниже нуля счёт не опускается
