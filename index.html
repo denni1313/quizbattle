@@ -11,32 +11,37 @@
 
   <section id="start" class="center">
     <div class="emoji">🤔</div>
-    <h1 class="big">Насколько хорошо ты меня знаешь?</h1>
-    <p class="sub">5 вопросов. Выбирай ответ и узнай, настоящий ли ты друг!</p>
+    <h1 class="big" data-i18n="startTitle">Насколько хорошо ты меня знаешь?</h1>
+    <p class="sub" id="startSub">5 вопросов. Выбирай ответ и узнай, настоящий ли ты друг!</p>
     <div class="best hidden" id="bestStart"></div>
     <div class="menu">
-      <button class="next mode" id="soloBtn" type="button">Играть одному</button>
-      <button class="next mode alt" id="duelBtn" type="button">⚔️ Дуэль вдвоём</button>
+      <button class="next mode" id="soloBtn" type="button" data-i18n="soloBtn">Играть одному</button>
+      <button class="next mode alt" id="duelBtn" type="button" data-i18n="duelBtn">⚔️ Дуэль вдвоём</button>
+    </div>
+    <div class="langs">
+      <button class="lang" type="button" data-lang="ru" aria-pressed="false">RU</button>
+      <button class="lang" type="button" data-lang="pt" aria-pressed="false">PT</button>
+      <button class="lang" type="button" data-lang="en" aria-pressed="false">EN</button>
     </div>
   </section>
 
   <section id="setup" class="center hidden">
     <div class="emoji">⚔️</div>
-    <h1 class="big">Дуэль!</h1>
-    <p class="sub">Играете вдвоём на одном телефоне. Вводи имена (можно не вводить).</p>
+    <h1 class="big" data-i18n="setupTitle">Дуэль!</h1>
+    <p class="sub" data-i18n="setupSub">Играете вдвоём на одном телефоне. Вводи имена (можно не вводить).</p>
     <div class="names">
-      <input id="n0" class="p0" type="text" maxlength="14" placeholder="Игрок 1" autocomplete="off">
-      <input id="n1" class="p1" type="text" maxlength="14" placeholder="Игрок 2" autocomplete="off">
+      <input id="n0" class="p0" type="text" maxlength="14" data-i18n-ph="player1" placeholder="Игрок 1" autocomplete="off">
+      <input id="n1" class="p1" type="text" maxlength="14" data-i18n-ph="player2" placeholder="Игрок 2" autocomplete="off">
     </div>
-    <button class="next" id="goBtn" type="button">Поехали!</button>
+    <button class="next" id="goBtn" type="button" data-i18n="goBtn">Поехали!</button>
   </section>
 
   <section id="pass" class="center hidden">
     <div class="emoji">📱</div>
-    <p class="sub">Передай телефон</p>
+    <p class="sub" data-i18n="passTitle">Передай телефон</p>
     <div class="pass-name" id="passName"></div>
-    <p class="sub">Первый игрок не подсматривает! Ответ ещё не показан.</p>
-    <button class="next" id="readyBtn" type="button">Я готов!</button>
+    <p class="sub" data-i18n="passSub">Первый игрок не подсматривает! Ответ ещё не показан.</p>
+    <button class="next" id="readyBtn" type="button" data-i18n="readyBtn">Я готов!</button>
   </section>
 
   <section id="game" class="hidden" style="display:flex;flex-direction:column;gap:14px;flex:1">
@@ -47,7 +52,7 @@
     <div class="timer" id="timer"><i id="timerFill"></i><b id="timerText">⏱ 20</b></div>
     <div class="turn hidden" id="turn"></div>
     <div class="tools">
-      <button class="hint" id="hintBtn" type="button">💡 50 / 50 <span id="hintLeft">×2</span></button>
+      <button class="hint" id="hintBtn" type="button"><span data-i18n="hint">💡 50 / 50</span> <span id="hintLeft">×2</span></button>
     </div>
     <div class="bar"><i id="barFill"></i></div>
     <div class="card"><div class="q" id="question"></div></div>
@@ -63,14 +68,20 @@
     <div class="best hidden" id="bestResult"></div>
     <h2 class="big" id="resTitle"></h2>
     <p class="sub" id="resText"></p>
-    <button class="next" id="againBtn" type="button">Играть ещё раз</button>
+    <div class="langs">
+      <button class="lang" type="button" data-lang="ru" aria-pressed="false">RU</button>
+      <button class="lang" type="button" data-lang="pt" aria-pressed="false">PT</button>
+      <button class="lang" type="button" data-lang="en" aria-pressed="false">EN</button>
+    </div>
+    <button class="next" id="againBtn" type="button" data-i18n="againBtn">Играть ещё раз</button>
   </section>
 
 </div>
 
-<button class="mute" id="muteBtn" type="button" aria-label="Звук">🔊</button>
+<button class="mute" id="muteBtn" type="button" data-i18n-aria="soundAria" aria-label="Звук">🔊</button>
 
 <script src="questions.js"></script>
+<script src="i18n.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

@@ -1,19 +1,18 @@
 (function () {
-  var LETTERS = ["А", "Б", "В", "Г"];
-  var PRAISE = ["Верно! 🎉", "Точно в цель! 🎯", "Ты знаешь меня! 💪", "Да! Так держать! 🔥", "Вот это память! 🧠"];
-  var OOPS = ["Мимо! 😅", "Не угадал! 🙈", "Ой, не то! 😬"];
-  var RESULTS = [
-    { min: 5, emoji: "🏆", title: "Ты мой лучший друг!", text: "Ты знаешь обо мне абсолютно всё. Это просто космос!" },
-    { min: 4, emoji: "🌟", title: "Почти идеально!", text: "Ты знаешь меня очень хорошо. Не хватило совсем чуть-чуть!" },
-    { min: 3, emoji: "👍", title: "Неплохо!", text: "Ты знаешь меня довольно хорошо, но есть что узнать." },
-    { min: 2, emoji: "🤔", title: "Давай познакомимся!", text: "Кое-что ты угадал. Пора нам почаще общаться!" },
-    { min: 0, emoji: "😄", title: "Мы почти не знакомы!", text: "Ничего страшного! Поиграем вместе, и ты узнаешь меня лучше." }
+  // Порядок совпадает с I18N[lang].results[] в i18n.js: 5, 4, 3, 2, 0 баллов.
+  var RESULT_META = [
+    { min: 5, emoji: "🏆" },
+    { min: 4, emoji: "🌟" },
+    { min: 3, emoji: "👍" },
+    { min: 2, emoji: "🤔" },
+    { min: 0, emoji: "😄" }
   ];
 
   var $ = function (id) { return document.getElementById(id); };
   var index = 0, locked = false;
   var mode = "solo";
-  var names = ["Игрок 1", "Игрок 2"];
+  var lang = "ru";
+  var names = ["", ""];
   var scores = [0, 0];
   var correct = [0, 0];    // сколько ответов верно (для процента), не зависит от штрафов
   var turn = 0, picks = [];
@@ -24,7 +23,91 @@
   var hints = [HINTS, HINTS];
   var hintUsed = false;     // на этом вопросе уже брали подсказку
   var BEST_KEY = "qb-best";
+  var LANG_KEY = "qb-lang";
   var best = null;          // { score, percent, total } — лучший результат одиночной игры
+  var recordFlag = false;   // текущая одиночная игра побила рекорд (не пересчитываем при смене языка)
+
+  // ---------- Язык ----------
+  function t(key, params) { return tr(lang, key, params); }
+
+  function list(key) {
+    var dict = I18N[lang] || I18N.ru;
+    return dict[key] || I18N.ru[key] || [];
+  }
+
+  function qText(item) {
+    return (item.q && (item.q[lang] || item.q.ru)) || String(item.q || "");
+  }
+
+  function aList(item) {
+    return (item.a && (item.a[lang] || item.a.ru)) || [];
+  }
+
+  function aText(item, i) {
+    return aList(item)[i];
+  }
+
+  function matchLang(tag) {
+    if (!tag) return null;
+    var v = String(tag).toLowerCase();
+    if (v.indexOf("pt") === 0) return "pt";
+    if (v.indexOf("en") === 0) return "en";
+    if (v.indexOf("ru") === 0) return "ru";
+    return null;
+  }
+
+  function detectLang() {
+    var fromUrl = null;
+    try { fromUrl = matchLang(new URLSearchParams(window.location.search).get("lang")); } catch (e) {}
+    if (fromUrl) return fromUrl;
+    var stored = null;
+    try { stored = matchLang(localStorage.getItem(LANG_KEY)); } catch (e) {}
+    if (stored) return stored;
+    if (navigator.languages) {
+      for (var i = 0; i < navigator.languages.length; i++) {
+        var m = matchLang(navigator.languages[i]);
+        if (m) return m;
+      }
+    }
+    return matchLang(navigator.language) || "ru";
+  }
+
+  function applyLang(l) {
+    lang = l;
+    document.documentElement.lang = l;
+    document.title = t("title");
+
+    var nodes = document.querySelectorAll("[data-i18n]");
+    for (var i = 0; i < nodes.length; i++) nodes[i].textContent = t(nodes[i].getAttribute("data-i18n"));
+
+    var phs = document.querySelectorAll("[data-i18n-ph]");
+    for (var j = 0; j < phs.length; j++) phs[j].setAttribute("placeholder", t(phs[j].getAttribute("data-i18n-ph")));
+
+    var arias = document.querySelectorAll("[data-i18n-aria]");
+    for (var k = 0; k < arias.length; k++) arias[k].setAttribute("aria-label", t(arias[k].getAttribute("data-i18n-aria")));
+
+    $("startSub").textContent = t("startSub", {
+      n: QUESTIONS.length,
+      q: plural(l, QUESTIONS.length, {
+        ru: ["вопрос", "вопроса", "вопросов"],
+        pt: ["pergunta", "perguntas"],
+        en: ["question", "questions"]
+      })
+    });
+
+    var btns = document.querySelectorAll(".lang");
+    for (var b = 0; b < btns.length; b++) {
+      var on = btns[b].getAttribute("data-lang") === l;
+      btns[b].classList.toggle("on", on);
+      btns[b].setAttribute("aria-pressed", on ? "true" : "false");
+    }
+
+    renderBest(recordFlag);
+    renderScores();
+    renderTurn();
+    renderHint();
+    if (!$("result").classList.contains("hidden")) renderResult();
+  }
 
   // ---------- Звуки (рисуются прямо в браузере, без файлов) ----------
   var audio = null;
@@ -159,17 +242,17 @@
     var startEl = $("bestStart");
     var resEl = $("bestResult");
     if (best) {
-      startEl.textContent = "🏆 Лучший результат: " + best.percent + "% (" + best.correct + " из " + best.total + ")";
+      startEl.textContent = t("best", { p: best.percent, c: best.correct, t: best.total });
       startEl.classList.remove("hidden");
     } else {
       startEl.classList.add("hidden");
     }
     if (record) {
-      resEl.textContent = "🎉 Новый рекорд: " + percent(correct[0]) + "% (" + correct[0] + " из " + QUESTIONS.length + ")";
+      resEl.textContent = t("record", { p: percent(correct[0]), c: correct[0], t: QUESTIONS.length });
       resEl.classList.remove("hidden");
       resEl.classList.add("record");
     } else if (best) {
-      resEl.textContent = "🏆 Лучший результат: " + best.percent + "% (" + best.correct + " из " + best.total + ")";
+      resEl.textContent = t("best", { p: best.percent, c: best.correct, t: best.total });
       resEl.classList.remove("hidden");
       resEl.classList.remove("record");
     } else {
@@ -191,7 +274,7 @@
     if (mode === "solo") {
       var p = document.createElement("div");
       p.className = "pill";
-      p.textContent = "Счёт: " + scores[0];
+      p.textContent = t("score", { s: scores[0] });
       box.appendChild(p);
       return;
     }
@@ -204,11 +287,11 @@
   }
 
   function renderTurn() {
-    var t = $("turn");
-    if (mode === "solo") { t.classList.add("hidden"); return; }
-    t.classList.remove("hidden");
-    t.className = "turn t" + turn;
-    t.textContent = "Ход: " + names[turn];
+    var el = $("turn");
+    if (mode === "solo") { el.classList.add("hidden"); return; }
+    el.classList.remove("hidden");
+    el.className = "turn t" + turn;
+    el.textContent = t("turn", { name: names[turn] });
   }
 
   function renderHint() {
@@ -224,7 +307,8 @@
     hintUsed = true;
     var item = QUESTIONS[index];
     var wrong = [];
-    for (var k = 0; k < item.a.length; k++) if (k !== item.right) wrong.push(k);
+    var count = aList(item).length;
+    for (var k = 0; k < count; k++) if (k !== item.right) wrong.push(k);
     // убираем два случайных неправильных ответа
     wrong.sort(function () { return Math.random() - 0.5; });
     var buttons = $("answers").children;
@@ -240,11 +324,11 @@
     var item = QUESTIONS[index];
     locked = false;
     hintUsed = false;
-    $("counter").textContent = "Вопрос " + (index + 1) + " из " + QUESTIONS.length;
+    $("counter").textContent = t("counter", { i: index + 1, n: QUESTIONS.length });
     renderScores();
     renderTurn();
     $("barFill").style.width = (index / QUESTIONS.length * 100) + "%";
-    $("question").textContent = item.q;
+    $("question").textContent = qText(item);
     $("feedback").innerHTML = "";
     renderAnswers();
     renderHint();
@@ -253,13 +337,14 @@
 
   function renderAnswers() {
     var item = QUESTIONS[index];
+    var letters = list("letters");
     var box = $("answers");
     box.innerHTML = "";
-    item.a.forEach(function (text, i) {
+    aList(item).forEach(function (text, i) {
       var b = document.createElement("button");
       b.type = "button";
       b.className = "ans c" + i;
-      b.innerHTML = '<span class="letter">' + LETTERS[i] + '</span><span class="txt"></span>';
+      b.innerHTML = '<span class="letter">' + letters[i] + '</span><span class="txt"></span>';
       b.querySelector(".txt").textContent = text;
       if (item.img) {
         b.classList.add("photo");
@@ -291,7 +376,7 @@
     nb.type = "button";
     nb.className = "next";
     nb.id = "nextBtn";
-    nb.textContent = last ? (mode === "duel" ? "Кто победил?" : "Узнать результат") : "Дальше";
+    nb.textContent = last ? (mode === "duel" ? t("whoWon") : t("toResult")) : t("next");
     nb.addEventListener("click", next);
     fb.appendChild(nb);
   }
@@ -315,11 +400,14 @@
       renderScores();
       var fb = $("feedback");
       fb.innerHTML = "";
-      var t = document.createElement("div");
-      t.className = "fb-text";
-      var msg = timedOut ? "Время вышло! ⏰" : (ok ? PRAISE[Math.floor(Math.random() * PRAISE.length)] : OOPS[Math.floor(Math.random() * OOPS.length)]);
-      t.textContent = ok ? msg + " +1 балл" : msg + (lost ? " −1 балл." : " Балл не меняется.") + " Правильный ответ: " + item.a[item.right];
-      fb.appendChild(t);
+      var line = document.createElement("div");
+      line.className = "fb-text";
+      var praise = list("praise"), oops = list("oops");
+      var msg = timedOut ? t("timeUp") : (ok ? praise[Math.floor(Math.random() * praise.length)] : oops[Math.floor(Math.random() * oops.length)]);
+      line.textContent = ok
+        ? msg + " " + t("plus1")
+        : msg + " " + (lost ? t("minus1") : t("noChange")) + " " + t("rightAnswer", { answer: aText(item, item.right) });
+      fb.appendChild(line);
       nextButton(fb);
       return;
     }
@@ -338,7 +426,7 @@
     fb2.innerHTML = "";
     var rightText = document.createElement("div");
     rightText.className = "fb-text";
-    rightText.textContent = "Правильный ответ: " + item.a[item.right];
+    rightText.textContent = t("rightAnswer", { answer: aText(item, item.right) });
     fb2.appendChild(rightText);
     for (var k = 0; k < 2; k++) {
       var okk = picks[k] === item.right;
@@ -346,10 +434,11 @@
       var lostk = !okk && picks[k] !== -1 && scores[k] > 0;
       if (okk) { scores[k]++; correct[k]++; }
       else if (lostk) scores[k]--;
-      var line = document.createElement("div");
-      line.className = "fb-line";
-      line.textContent = names[k] + ": " + (okk ? "верно! +1 ✅" : (picks[k] === -1 ? "не успел ⏰ 0" : (lostk ? "мимо −1 ❌" : "мимо ❌ 0")));
-      fb2.appendChild(line);
+      var key = okk ? "correctLine" : (picks[k] === -1 ? "timeoutLine" : (lostk ? "wrongLine" : "wrongZeroLine"));
+      var lineEl = document.createElement("div");
+      lineEl.className = "fb-line";
+      lineEl.textContent = t(key, { name: names[k] });
+      fb2.appendChild(lineEl);
     }
     play(picks[0] === item.right || picks[1] === item.right ? "right" : "wrong");
     renderScores();
@@ -367,53 +456,74 @@
     if (index >= QUESTIONS.length) { finish(); } else { render(); }
   }
 
+  // ---------- Итоговый экран ----------
+  function renderSoloResult() {
+    var idx = RESULT_META.length - 1;
+    for (var i = 0; i < RESULT_META.length; i++) {
+      if (scores[0] >= RESULT_META[i].min) { idx = i; break; }
+    }
+    var meta = RESULT_META[idx];
+    var texts = list("results")[idx] || { title: "", text: "" };
+    $("resLabel").textContent = t("resultLabel");
+    $("resEmoji").textContent = meta.emoji;
+    $("resScore").textContent = t("scoreOf", { s: scores[0], t: QUESTIONS.length });
+    $("resPercent").textContent = t("percentLabel", { p: percent(correct[0]) });
+    renderBest(recordFlag);
+    $("resTitle").textContent = texts.title;
+    $("resText").textContent = texts.text;
+  }
+
+  function renderDuelResult() {
+    $("resLabel").textContent = t("duelResultLabel");
+    $("resScore").textContent = scores[0] + " : " + scores[1];
+    $("bestResult").classList.add("hidden");
+    $("bestResult").classList.remove("record");
+    $("resPercent").textContent = t("duelPercents", {
+      n0: names[0], p0: percent(correct[0]),
+      n1: names[1], p1: percent(correct[1])
+    });
+    if (scores[0] === scores[1]) {
+      $("resEmoji").textContent = "🤝";
+      $("resTitle").textContent = t("drawTitle");
+      $("resText").textContent = t("drawText");
+    } else {
+      var w = scores[0] > scores[1] ? 0 : 1;
+      $("resEmoji").textContent = "🏆";
+      $("resTitle").textContent = t("winTitle", { name: names[w] });
+      $("resText").textContent = t("winText", {
+        name: names[w], c: correct[w], t: QUESTIONS.length, p: percent(correct[w])
+      });
+    }
+  }
+
+  function renderResult() {
+    if (mode === "duel") renderDuelResult();
+    else renderSoloResult();
+  }
+
   function finish() {
     stopTimer();
     if (mode === "duel") {
-      $("resLabel").textContent = "Итог дуэли";
-      $("resScore").textContent = scores[0] + " : " + scores[1];
-      $("bestResult").classList.add("hidden");
-      $("bestResult").classList.remove("record");
-      $("resPercent").textContent = names[0] + " — " + percent(correct[0]) + "% • " + names[1] + " — " + percent(correct[1]) + "%";
-      if (scores[0] === scores[1]) {
-        play("right");
-        $("resEmoji").textContent = "🤝";
-        $("resTitle").textContent = "Ничья!";
-        $("resText").textContent = "Вы знаете меня одинаково хорошо. Сыграйте ещё раз, чтобы выявить победителя!";
-      } else {
-        var w = scores[0] > scores[1] ? 0 : 1;
-        play("win");
-        $("resEmoji").textContent = "🏆";
-        $("resTitle").textContent = "Победил " + names[w] + "!";
-        $("resText").textContent = names[w] + " знает меня лучше: " + correct[w] + " из " + QUESTIONS.length + " (" + percent(correct[w]) + "% правильных). Поздравляем!";
-      }
+      play(scores[0] === scores[1] ? "right" : "win");
       show("result");
+      renderResult();
       return;
     }
-    var r = RESULTS[RESULTS.length - 1];
-    for (var i = 0; i < RESULTS.length; i++) {
-      if (scores[0] >= RESULTS[i].min) { r = RESULTS[i]; break; }
-    }
     play(scores[0] >= 3 ? "win" : "wrong");
-    $("resLabel").textContent = "Твой результат";
-    $("resEmoji").textContent = r.emoji;
-    $("resScore").textContent = scores[0] + " из " + QUESTIONS.length;
     var p = percent(correct[0]);
-    $("resPercent").textContent = p + "% правильных";
-    var record = isBetter(p, scores[0]);
-    if (record) {
+    recordFlag = isBetter(p, scores[0]);
+    if (recordFlag) {
       best = { score: scores[0], correct: correct[0], percent: p, total: QUESTIONS.length };
       saveBest();
     }
-    renderBest(record);
-    $("resTitle").textContent = r.title;
-    $("resText").textContent = r.text;
     show("result");
+    renderResult();
   }
 
   function begin() {
     index = 0; turn = 0; picks = []; scores = [0, 0]; correct = [0, 0];
     hints = [HINTS, HINTS];
+    recordFlag = false;
     ac();   // звук включается после первого нажатия (так требуют браузеры)
     show("game");
     render();
@@ -422,8 +532,8 @@
   $("soloBtn").addEventListener("click", function () { mode = "solo"; begin(); });
   $("duelBtn").addEventListener("click", function () { mode = "duel"; show("setup"); });
   $("goBtn").addEventListener("click", function () {
-    names[0] = $("n0").value.trim() || "Игрок 1";
-    names[1] = $("n1").value.trim() || "Игрок 2";
+    names[0] = $("n0").value.trim() || t("player1");
+    names[1] = $("n1").value.trim() || t("player2");
     if (names[1] === names[0]) names[1] = names[1] + " (2)";
     begin();
   });
@@ -444,7 +554,17 @@
     renderMute();
     if (!muted) play("right");
   });
+
+  var langBtns = document.querySelectorAll(".lang");
+  for (var lb = 0; lb < langBtns.length; lb++) {
+    langBtns[lb].addEventListener("click", function () {
+      var chosen = this.getAttribute("data-lang");
+      try { localStorage.setItem(LANG_KEY, chosen); } catch (e) {}
+      applyLang(chosen);
+    });
+  }
+
   renderMute();
   loadBest();
-  renderBest();
+  applyLang(detectLang());
 })();

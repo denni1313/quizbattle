@@ -107,6 +107,14 @@
     position: fixed; right: 14px; bottom: 14px; z-index: 10; width: 52px; height: 52px; border-radius: 50%;
     border: none; cursor: pointer; font-size: 1.5rem; background: rgba(0, 0, 0, .3); color: #fff;
   }
+  .langs { display: flex; justify-content: center; gap: 8px; }
+  .lang {
+    background: rgba(0, 0, 0, .25); color: #fff; border: 2px solid rgba(255, 255, 255, .35);
+    border-radius: 999px; cursor: pointer; font: inherit; font-weight: 900; letter-spacing: .04em;
+    font-size: 1rem; padding: 6px 18px; transition: transform .1s ease, background .2s ease;
+  }
+  .lang:active { transform: translateY(2px); }
+  .lang.on { background: #ffd23f; color: #2b1055; border-color: #ffd23f; }
 
   @media (max-width: 520px) {
     .answers { grid-template-columns: 1fr; }
