@@ -143,5 +143,4 @@
     .answers { grid-template-columns: 1fr; }
     .ans { min-height: 84px; }
     .ans.photo { min-height: 240px; }
-    .lang { font-size: .82rem; padding: 6px 10px; }
   }
