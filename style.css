@@ -107,17 +107,41 @@
     position: fixed; right: 14px; bottom: 14px; z-index: 10; width: 52px; height: 52px; border-radius: 50%;
     border: none; cursor: pointer; font-size: 1.5rem; background: rgba(0, 0, 0, .3); color: #fff;
   }
-  .langs { display: flex; justify-content: center; gap: 8px; }
+  .langs { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
   .lang {
-    background: rgba(0, 0, 0, .25); color: #fff; border: 2px solid rgba(255, 255, 255, .35);
-    border-radius: 999px; cursor: pointer; font: inherit; font-weight: 900; letter-spacing: .04em;
-    font-size: 1rem; padding: 6px 18px; transition: transform .1s ease, background .2s ease;
+    background: rgba(3, 10, 28, .78); color: #a8ecff; border: 2px solid #29d6ff;
+    border-radius: 999px; cursor: pointer; font: inherit; font-weight: 900; font-size: .95rem;
+    padding: 7px 15px; letter-spacing: .02em;
+    text-shadow: 0 0 8px rgba(41, 214, 255, .85), 0 0 20px rgba(41, 214, 255, .35);
+    box-shadow: 0 0 10px rgba(41, 214, 255, .5), 0 0 26px rgba(41, 214, 255, .22), inset 0 0 14px rgba(41, 214, 255, .16);
+    transition: transform .1s ease, color .2s ease, border-color .2s ease, box-shadow .2s ease;
   }
   .lang:active { transform: translateY(2px); }
-  .lang.on { background: #ffd23f; color: #2b1055; border-color: #ffd23f; }
+  .lang.on {
+    background: #29d6ff; color: #04122a; border-color: #a8ecff; text-shadow: none;
+    box-shadow: 0 0 18px rgba(41, 214, 255, .85), 0 0 44px rgba(41, 214, 255, .45), inset 0 0 10px rgba(255, 255, 255, .5);
+  }
+
+  /* Неоново-синие кнопки стартового меню */
+  .next.mode {
+    background: rgba(3, 10, 28, .78); color: #a8ecff; border: 2px solid #29d6ff;
+    text-shadow: 0 0 8px rgba(41, 214, 255, .85), 0 0 20px rgba(41, 214, 255, .35);
+    box-shadow: 0 0 12px rgba(41, 214, 255, .55), 0 0 30px rgba(41, 214, 255, .28), inset 0 0 16px rgba(41, 214, 255, .16);
+    transition: transform .1s ease, color .2s ease, border-color .2s ease, box-shadow .2s ease;
+  }
+  .next.mode:hover:not(:disabled) {
+    color: #eafcff; border-color: #7fe9ff;
+    text-shadow: 0 0 10px rgba(127, 233, 255, .95), 0 0 26px rgba(41, 214, 255, .6);
+    box-shadow: 0 0 18px rgba(41, 214, 255, .8), 0 0 46px rgba(41, 214, 255, .38), inset 0 0 20px rgba(41, 214, 255, .3);
+  }
+  .next.mode:active {
+    transform: translateY(3px);
+    box-shadow: 0 0 8px rgba(41, 214, 255, .65), inset 0 0 20px rgba(41, 214, 255, .32);
+  }
 
   @media (max-width: 520px) {
     .answers { grid-template-columns: 1fr; }
     .ans { min-height: 84px; }
     .ans.photo { min-height: 240px; }
+    .lang { font-size: .82rem; padding: 6px 10px; }
   }

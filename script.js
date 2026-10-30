@@ -24,6 +24,7 @@
   var hintUsed = false;     // на этом вопросе уже брали подсказку
   var BEST_KEY = "qb-best";
   var LANG_KEY = "qb-lang";
+  var LANG_KEYS = { ru: "langRu", pt: "langPt", en: "langEn" };
   var best = null;          // { score, percent, total } — лучший результат одиночной игры
   var recordFlag = false;   // текущая одиночная игра побила рекорд (не пересчитываем при смене языка)
 
@@ -97,7 +98,11 @@
 
     var btns = document.querySelectorAll(".lang");
     for (var b = 0; b < btns.length; b++) {
-      var on = btns[b].getAttribute("data-lang") === l;
+      var code = btns[b].getAttribute("data-lang");
+      var name = t(LANG_KEYS[code]);
+      btns[b].textContent = name;
+      btns[b].setAttribute("aria-label", name);
+      var on = code === l;
       btns[b].classList.toggle("on", on);
       btns[b].setAttribute("aria-pressed", on ? "true" : "false");
     }
